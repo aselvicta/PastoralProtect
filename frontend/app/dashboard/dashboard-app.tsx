@@ -33,33 +33,6 @@ type Impact = {
   ndvi_snapshots_archived: number;
 };
 
-type CyclePhase = {
-  id: string;
-  label: string;
-  status: "complete" | "pending" | "failed" | "skipped";
-  detail: string;
-};
-
-type CycleStatus = {
-  phases: CyclePhase[];
-  storage_backend: "mock" | "storacha" | "legacy_http";
-  chain_configured: boolean;
-  cycle_complete: boolean;
-};
-
-function phaseStyles(status: CyclePhase["status"]) {
-  switch (status) {
-    case "complete":
-      return "border-emerald-200 bg-emerald-50/80 text-emerald-950";
-    case "failed":
-      return "border-red-200 bg-red-50 text-red-950";
-    case "skipped":
-      return "border-savanna-200 bg-savanna-50/80 text-savanna-700";
-    default:
-      return "border-amber-200 bg-amber-50/90 text-amber-950";
-  }
-}
-
 export function DashboardApp() {
   const [user, setUser] = useState("admin");
   const [pass, setPass] = useState("");
@@ -69,10 +42,10 @@ export function DashboardApp() {
     zones: Zone[];
     events: Recent[];
     impact: Impact;
-    cycle: CycleStatus;
   } | null>(null);
   const [demoLog, setDemoLog] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
   const refresh = useCallback(async (t?: string | null) => {
@@ -83,19 +56,33 @@ export function DashboardApp() {
     }
     setLoadErr(null);
     try {
-      const [pool, zones, events, impact, cycle] = await Promise.all([
+      const [pool, zones, events, impact] = await Promise.all([
         apiGet<Pool>("/api/admin/pool-status", tok),
         apiGet<Zone[]>("/api/zones", tok),
         apiGet<Recent[]>("/api/admin/recent-events", tok),
         apiGet<Impact>("/api/admin/impact", tok),
-        apiGet<CycleStatus>("/api/cycle/status", tok),
       ]);
-      setData({ pool, zones, events, impact, cycle });
+      setData({ pool, zones, events, impact });
     } catch (e) {
       setData(null);
       setLoadErr(e instanceof Error ? e.message : "Failed to load dashboard");
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const started = Date.now();
+    const minVisibleMs = 650;
+    try {
+      await refresh();
+    } finally {
+      const elapsed = Date.now() - started;
+      if (elapsed < minVisibleMs) {
+        await new Promise((r) => setTimeout(r, minVisibleMs - elapsed));
+      }
+      setRefreshing(false);
+    }
+  }, [refresh]);
 
   useEffect(() => {
     const tok = getStoredToken();
@@ -180,129 +167,111 @@ export function DashboardApp() {
       : [];
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-savanna-900">Dashboard</h1>
-        {isLoaded ? (
-          <p className="mt-1 text-sm text-savanna-600">Live pool health and activity.</p>
-        ) : (
-          <p className="mt-1 text-sm text-savanna-600">Sign in to view operator metrics.</p>
-        )}
-      </div>
-
-      {initializing && tok && (
-        <p className="text-sm text-savanna-600" aria-live="polite">
-          Loading dashboard…
-        </p>
-      )}
-
-      {/* Login: only when there is no session */}
-      {showLoginGate && (
-        <form
-          onSubmit={login}
-          className="max-w-md space-y-4 rounded-2xl border border-savanna-200 bg-white/90 p-6 shadow-sm"
-        >
-          <div className="space-y-3">
-            <label className="block text-sm">
-              <span className="font-medium text-savanna-800">Username</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-savanna-200 px-3 py-2"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                autoComplete="username"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-savanna-800">Password</span>
-              <input
-                type="password"
-                className="mt-1 w-full rounded-lg border border-savanna-200 px-3 py-2"
-                value={pass}
-                onChange={(e) => setPass(e.target.value)}
-                autoComplete="current-password"
-              />
-            </label>
+    <div className={showLoginGate ? "" : "space-y-8"}>
+      {showLoginGate ? (
+        <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md space-y-8">
+            <div className="text-center">
+              <h1 className="font-display text-3xl font-semibold text-savanna-900">Dashboard</h1>
+              <p className="mt-2 text-sm text-savanna-600">Sign in to view operator metrics.</p>
+            </div>
+            <form
+              onSubmit={login}
+              className="space-y-4 rounded-2xl border border-savanna-200 bg-white/90 p-6 shadow-sm"
+            >
+              <div className="space-y-3 text-left">
+                <label className="block text-sm">
+                  <span className="font-medium text-savanna-800">Username</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-savanna-200 px-3 py-2"
+                    value={user}
+                    onChange={(e) => setUser(e.target.value)}
+                    autoComplete="username"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="font-medium text-savanna-800">Password</span>
+                  <input
+                    type="password"
+                    className="mt-1 w-full rounded-lg border border-savanna-200 px-3 py-2"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full rounded-xl bg-savanna-800 py-2.5 text-sm font-semibold text-white hover:bg-savanna-900 disabled:opacity-60"
+              >
+                {busy ? "Signing in…" : "Sign in"}
+              </button>
+              <p className="text-center text-xs text-savanna-500">
+                Demo credentials are in the project README.
+              </p>
+            </form>
+            {loadErr ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-900">
+                {loadErr}
+              </div>
+            ) : null}
           </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-xl bg-savanna-800 py-2.5 text-sm font-semibold text-white hover:bg-savanna-900 disabled:opacity-60"
-          >
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-          <p className="text-center text-xs text-savanna-500">
-            Demo credentials are in the project README.
-          </p>
-        </form>
-      )}
-
-      {showLoginError && (
-        <div className="max-w-md space-y-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p>{loadErr}</p>
-          <button
-            type="button"
-            onClick={signOut}
-            className="font-semibold text-skyj underline"
-          >
-            Clear session and sign in again
-          </button>
         </div>
-      )}
+      ) : (
+        <>
+          <div>
+            <h1 className="font-display text-3xl font-semibold text-savanna-900">Dashboard</h1>
+            {isLoaded ? (
+              <p className="mt-1 text-sm text-savanna-600">Live pool health and activity.</p>
+            ) : tok ? (
+              initializing ? (
+                <p className="mt-1 text-sm text-savanna-600" aria-live="polite">
+                  Loading dashboard…
+                </p>
+              ) : null
+            ) : null}
+          </div>
 
-      {loadErr && showLoginGate && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{loadErr}</div>
+          {showLoginError && (
+            <div className="max-w-md space-y-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <p>{loadErr}</p>
+              <button
+                type="button"
+                onClick={signOut}
+                className="font-semibold text-skyj underline"
+              >
+                Clear session and sign in again
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {isLoaded && data && (
         <>
-          <div className="rounded-2xl border border-savanna-200 bg-white/90 p-5 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-savanna-900">README pipeline</h2>
-                <p className="mt-1 text-xs text-savanna-600">
-                  Same flow as the architecture diagram: ingress → IPFS pin → verifiable oracle → optional pool → mock
-                  payouts. Storage: <span className="font-mono">{data.cycle.storage_backend}</span>
-                  {data.cycle.chain_configured ? " · chain configured" : ""}.
-                </p>
-              </div>
-              <span
-                className={
-                  data.cycle.cycle_complete
-                    ? "inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900"
-                    : "inline-flex shrink-0 items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-950"
-                }
-              >
-                {data.cycle.cycle_complete ? "Full cycle complete" : "Run demo or simulate to finish"}
-              </span>
-            </div>
-            <ol className="mt-4 space-y-2">
-              {data.cycle.phases.map((ph, i) => (
-                <li
-                  key={ph.id}
-                  className={`flex gap-3 rounded-xl border px-3 py-2.5 text-sm ${phaseStyles(ph.status)}`}
-                >
-                  <span className="font-mono text-xs font-semibold opacity-70">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-snug">{ph.label}</p>
-                    <p className="mt-0.5 text-xs opacity-90">{ph.detail}</p>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide opacity-80">{ph.status}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-
           <div className="rounded-2xl border border-savanna-200 bg-white/90 p-5 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-display text-lg font-semibold text-savanna-900">Pool metrics</h2>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => refresh()}
-                  className="rounded-lg border border-savanna-300 px-3 py-1.5 text-sm hover:bg-savanna-50 disabled:opacity-50"
+                  disabled={busy || refreshing}
+                  aria-busy={refreshing}
+                  onClick={() => void handleRefresh()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-savanna-300 px-3 py-1.5 text-sm hover:bg-savanna-50 disabled:opacity-50"
                 >
-                  Refresh
+                  {refreshing ? (
+                    <>
+                      <span
+                        className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-savanna-400 border-t-transparent"
+                        aria-hidden
+                      />
+                      Refreshing…
+                    </>
+                  ) : (
+                    "Refresh"
+                  )}
                 </button>
                 <button
                   type="button"
@@ -313,19 +282,6 @@ export function DashboardApp() {
                   Run full demo
                 </button>
               </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-savanna-100 pt-3 text-xs text-savanna-600">
-              {[
-                "Oracle",
-                "NDVI monitoring",
-                "Payout rail",
-                data.pool.latest_trigger?.storage_cid ? "IPFS active" : "IPFS",
-              ].map((label) => (
-                <span key={label} className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                  {label}
-                </span>
-              ))}
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {[

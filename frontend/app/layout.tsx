@@ -18,8 +18,6 @@ export const metadata: Metadata = {
   description: "Automated drought-triggered livestock protection for pastoralists.",
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
@@ -27,18 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteHeader />
         <main className="min-h-screen">{children}</main>
         <footer className="border-t border-savanna-200 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-10 text-center space-y-2">
+          <div className="mx-auto max-w-6xl px-4 py-8 text-center">
             <p className="text-xs text-savanna-500">
-              © {new Date().getFullYear()} PastoralProtect. Climate risk demo for pastoral communities.
-            </p>
-            <p className="text-xs text-savanna-500">
-              <a href={`${apiBase}/docs`} className="font-medium text-skyj underline hover:text-savanna-800">
-                API docs
-              </a>
-              <span className="text-savanna-400"> · </span>
-              <span>
-                USSD mock: <code className="rounded bg-savanna-100 px-1 py-0.5 font-mono text-[11px]">POST /api/ussd</code>
-              </span>
+              © {new Date().getFullYear()} PastoralProtect. Climate risk infrastructure for pastoral communities.
             </p>
           </div>
         </footer>

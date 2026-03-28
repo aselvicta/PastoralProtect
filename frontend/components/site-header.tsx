@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getStoredToken, setStoredToken } from "@/lib/api";
+import { API_BASE, getStoredToken, setStoredToken } from "@/lib/api";
+
+const API_DOCS_URL = `${API_BASE}/docs`;
 
 function jwtRole(token: string): string | null {
   try {
@@ -48,6 +50,14 @@ export function SiteHeader() {
           >
             Simulate drought
           </Link>
+          <a
+            href={API_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center rounded-lg border-2 border-skyj/80 bg-skyj/10 px-2.5 py-1.5 text-sm font-semibold text-skyj hover:bg-skyj/20 sm:px-3"
+          >
+            API docs
+          </a>
           {tok && role && (
             <span className="ml-1 rounded-md border border-savanna-200 bg-savanna-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-savanna-800">
               {role}

@@ -1,18 +1,27 @@
 "use client";
 
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { API_BASE } from "@/lib/api";
 
-const techPills = ["FastAPI", "Solidity", "Filecoin / IPFS", "Oracle", "M-Pesa-ready"];
+import auditTrails from "@/images/auditTrails.webp";
+import cows from "@/images/cows.jpg";
+import developers from "@/images/developers.jpg";
+import mobilephones from "@/images/mobilephones.jpg";
+import satelliteOracle from "@/images/sattelite.png";
 
-/** Unsplash — pastoral, tech, and climate imagery */
-const IMG = {
-  satellite: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80",
-  phone: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1600&q=80",
-  code: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80",
-  orgDesk: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80",
-  pastoral: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1600&q=80",
+const API_DOCS_URL = `${API_BASE}/docs`;
+
+const techPills = ["FastAPI", "Solidity", "Filecoin / IPFS", "Oracle"];
+
+/** Local assets under `frontend/images/` — `object-cover` in FeatureColumn keeps aspect ratio in cards. */
+const IMG: Record<string, StaticImageData | string> = {
+  satellite: satelliteOracle,
+  paymentRail: mobilephones,
+  code: auditTrails,
+  orgDesk: developers,
+  pastoral: cows,
 };
 
 const featureColumns = [
@@ -29,7 +38,7 @@ const featureColumns = [
     topTitle: "Payout rail",
     topBody:
       "Structured for mobile money: the demo uses a mock ledger you can swap for a live M-Pesa or similar provider.",
-    image: IMG.phone,
+    image: IMG.paymentRail,
     imageLabel: "Mobile-ready payouts",
     bottomTitle: "Fast, traceable transfers",
     bottomBody: "Payouts are logged with amounts and policy links so operators can reconcile quickly.",
@@ -125,7 +134,14 @@ function FeatureColumn({
   imageLabel,
   bottomTitle,
   bottomBody,
-}: (typeof featureColumns)[0]) {
+}: {
+  topTitle: string;
+  topBody: string;
+  image: StaticImageData | string;
+  imageLabel: string;
+  bottomTitle: string;
+  bottomBody: string;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -255,7 +271,7 @@ export function LandingPage() {
       <section className="bg-savanna-100/40 py-20">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-center font-display text-2xl font-semibold text-savanna-900 md:text-3xl">
-            What your team gets in the demo
+            What PastoralProtect provides
           </h2>
           <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {capabilities.map((c) => (
@@ -315,6 +331,27 @@ export function LandingPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Developers — API docs + USSD once (not repeated in footer) */}
+      <section className="border-y border-savanna-200 bg-savanna-50/80 py-14">
+        <div className="mx-auto max-w-3xl px-4 text-center">
+          <h2 className="font-display text-2xl font-semibold text-savanna-900 md:text-3xl">Developers</h2>
+          <p className="mt-3 text-sm leading-relaxed text-savanna-600 md:text-base">
+            Open the docs to try the API in your browser. You will see login, enroll, oracle, storage, admin, and a simple
+            USSD test (
+            <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-savanna-800">POST /api/ussd</code>
+            ).
+          </p>
+          <a
+            href={API_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex min-w-[220px] justify-center rounded-xl border-2 border-skyj bg-skyj px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800"
+          >
+            Open API documentation
+          </a>
+        </div>
       </section>
 
       {/* FAQ — savanna band (matches platform neutrals) */}

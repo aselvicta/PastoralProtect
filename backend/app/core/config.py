@@ -38,7 +38,8 @@ class Settings(BaseSettings):
     # Allow POST /api/demo/run without JWT (hackathon kiosk); prefer False in production
     demo_public_access: bool = True
 
-    mock_payment_delay_ms: int = 2000
+    # Per payout; stacks with many policies in the same zone. Use 0 for instant (presentations).
+    mock_payment_delay_ms: int = 150
     payout_per_head: int = 1000
     chain_enroll_value_wei: int = 1_000_000_000_000_000  # 0.001 ETH
 

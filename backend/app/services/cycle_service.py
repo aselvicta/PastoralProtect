@@ -1,5 +1,5 @@
 """
-Maps deployment + DB state to the README pipeline (ingress → IPFS → oracle → optional chain → mock payouts).
+Maps deployment + DB state to the README / architecture pipeline (ingress → IPFS → oracle → optional chain → mock payouts).
 """
 
 from __future__ import annotations
