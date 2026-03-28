@@ -6,20 +6,6 @@ PastoralProtect is climate risk infrastructure specifically designed for pastora
 
 ---
 
-## DEMO QUICKSTART OVERVIEW
-
-| GOAL                       | WHAT YOU NEED                                                                                                      |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------|
-| RUN THE FULL UI + API LOOP | `backend/.env` from `.env.example`, `frontend/.env.local` from `frontend/.env.example`, SQLite default—no Storacha, chain, or paid APIs. |
-| REAL IPFS/FILECOIN PINS    | Optional: [storacha-uploader](storacha-uploader/README.md) or legacy `WEB3_STORAGE_TOKEN`. See [docs/SETUP.md](docs/SETUP.md). |
-| ON-CHAIN POOL              | Optional: `BASE_RPC_URL`, funded `PRIVATE_KEY`, deploy contract, `CONTRACT_ADDRESS`. See [docs/SETUP.md](docs/SETUP.md). |
-| PRODUCTION-STYLE DEPLOY    | PostgreSQL `DATABASE_URL`, `DEMO_PUBLIC_ACCESS=false`, strong secrets, HTTPS. See [docs/SETUP.md](docs/SETUP.md). |
-
-- STORAGE: Mock CIDs are sufficient for a complete demo; real Storacha is optional.
-- NOT INCLUDED: Real M-Pesa, production-only concerns, and live satellite feeds. See [docs/FUTURE_WORK.md](docs/FUTURE_WORK.md).
-
----
-
 ## PROBLEM STATEMENT
 
 Pastoralists in drought-prone areas often lose livestock due to climate shocks. Traditional insurance coverage fails them with manual claims processing, slow verification, complex paperwork, and unreliable connectivity—leading to delayed or denied payouts and limiting the scalability of relief.
@@ -91,14 +77,12 @@ HOW TO FOLLOW PIPELINE IN UI:
 
 ## TECHNOLOGY STACK
 
-| LAYER     | STACK                                                         |
-|-----------|---------------------------------------------------------------|
-| API       | FastAPI, Pydantic, Uvicorn                                    |
-| DATA      | SQLAlchemy + PostgreSQL or SQLite                             |
-| STORAGE   | IPFS/Filecoin (HTTP pinning + gateway fetch)                  |
-| AUTH      | JWT roles (`ADMIN`, `ORACLE`, `USER`)—Lit-style ready         |
-| CHAIN     | Solidity (`PastoralProtectPool`) + Hardhat + web3.py          |
-| UI        | Next.js 14, Tailwind, Recharts                                |
+API: FastAPI, Pydantic, Uvicorn
+DATA: SQLAlchemy + PostgreSQL or SQLite
+STORAGE: IPFS/Filecoin (HTTP pinning + gateway fetch)
+AUTH: JWT roles (ADMIN, ORACLE, USER) — Lit-style ready
+CHAIN: Solidity (PastoralProtectPool) + Hardhat + web3.py
+UI: Next.js 14, Tailwind, Recharts
 
 ---
 
@@ -179,32 +163,6 @@ npm run dev
 cd contracts
 npm install && npx hardhat test
 ```
-
----
-
-## DEMO FLOW IN 4 SIMPLE STEPS (3 MINUTES)
-
-1. Understand the Problem: Pastoralists suffer losses in droughts; insurance is too slow and inefficient.
-2. Experience the Solution: Rules-driven flow—NDVI bundles archived to Filecoin/IPFS, with verifiable triggers and automatic payouts.
-3. See the Live Pipeline:  
-   - Enroll user  
-   - Simulate drought (NDVI drops below threshold)  
-   - Oracle verifies CID and hash  
-   - Payouts executed, dashboard impact metrics updated
-4. Conclude: “No claims. No paperwork. Just rules-based, verifiable protection.”
-
-JUDGES' SUMMARY:  
-“We built climate risk infrastructure powered by verifiable data and decentralized storage—not just another mobile app for farmers.”
-
----
-
-## MVP SECURITY NOTES
-
-- Always set `DEMO_PUBLIC_ACCESS=false` and rely on JWT security for all demo execution in any public deployment.
-- Regularly rotate `JWT_SECRET`, `ORACLE_SECRET`, and `WEB3_STORAGE_TOKEN`.
-- You may replace pbkdf2 password hashes with your organization’s standard algorithm.
-
----
 
 ## LICENSE
 
