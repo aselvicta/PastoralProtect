@@ -1,0 +1,14 @@
+You are building a hackathon MVP called PastoralProtect.
+
+Rules:
+1. Prioritize end-to-end demo flow over production completeness.
+2. Do not add unnecessary complexity.
+3. Use mock services for telecom, satellite feeds, and mobile money.
+4. Keep code modular, typed, and clean.
+5. Backend is FastAPI + SQLAlchemy + Pydantic; contracts stay Solidity/Hardhat.
+6. Filecoin/IPFS: canonical JSON → CID (web3.storage-compatible); verify SHA-256 before payouts.
+7. JWT roles ADMIN / ORACLE / USER; design guards so Lit Protocol can replace centralized JWT later.
+8. Every API must validate input.
+9. Every important event must be logged.
+10. Frontend must be demo-friendly and visually clean.
+11. The key demo story is: enroll -> simulate drought -> validate trigger -> execute payout -> show dashboard result.
