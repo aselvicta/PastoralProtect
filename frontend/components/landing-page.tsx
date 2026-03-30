@@ -102,27 +102,27 @@ const audiences = [
 
 const faqs = [
   {
-    q: "What is PastoralProtect and who is it for?",
+    q: "What is PastoralProtect's purpose and target audience?",
     a: "PastoralProtect is a B2B-style stack for insurers, cooperatives, NGOs, government programs, and agri-finance teams that want parametric livestock protection when drought shows up in vegetation—not weeks later in paperwork. You bring farmers, channels, and risk appetite; the demo shows zone rules, NDVI-style triggers, payout rails shaped for mobile money, and optional on-chain pool wiring. It is built for partners to embed in their own programs, not as a standalone consumer app every pastoralist installs separately.",
   },
   {
-    q: "What data sources power the automated assessments?",
+    q: "Which data streams drive the automated evaluation process?",
     a: "The reference build centers on NDVI-like greenness by climate zone: each zone carries a minimum vegetation threshold, and when readings stay below that line the system can treat it as pasture stress. In the demo you can simulate those readings; in production the same logic maps cleanly to satellite-derived NDVI (for example Sentinel-2 pipelines), partner indices, or other feeds you certify. Rainfall or temperature triggers can sit beside NDVI as you harden the product. When a rule fires, the oracle path runs checks (including integrity around stored bundles) before payouts—no manual claim forms for every shock. Filecoin / IPFS-style pinning is optional: it gives a stable copy of what was hashed at payout time, for appeals and audits.",
   },
   {
-    q: "How does partner or pilot onboarding work?",
+    q: "What are the steps for starting a partnership or pilot program?",
     a: "You start with zones and thresholds that match your geography, then enroll pastoralists with livestock counts, premiums, and payout contact details. The demo includes seed zones and flows so you can enroll a farmer and simulate a drought in one sitting. Staff access uses roles (for example admin vs oracle): configuration versus running assessments. A real rollout adds your KYC, languages, and production data feeds—but the same enrollment → monitor → trigger → payout sequence stays intact.",
   },
   {
-    q: "What does the pricing model look like?",
+    q: "How is the service priced?",
     a: "In the demo, premiums are mock amounts (for example in TZS) so you can follow premiums and payouts in the dashboard. In a live program you set premium levels and pool rules; totals stay reflected in pool and payout logs instead of hidden spreadsheets. Commercial platform fees would be agreed with your organization—the important part we demonstrate is transparent math: what was collected, what triggered, and what was paid.",
   },
   {
-    q: "Can we integrate PastoralProtect with our existing systems?",
+    q: "Is it possible to sync PastoralProtect with our current infrastructure?",
     a: "Yes. The stack is API-first: REST endpoints cover enrollment, zones, oracle simulation, storage pointers, and admin impact metrics. You can drive the same flows from USSD, a core banking system, or your own agent UI, and use the included web dashboard only where needed. Optional Solidity pools on Base can mirror pool health for partners who want on-chain transparency alongside off-chain operations.",
   },
   {
-    q: "How do I run the demo?",
+    q: "What is the process for launching the demo?",
     a: "Clone the repo, start the FastAPI backend and this Next.js app using the README environment examples, then open the Dashboard and sign in with the demo users. Use Demo enrollment to add a policy, Simulate drought to breach a zone’s NDVI threshold, and watch triggers, storage CIDs (when enabled), and payouts appear in the UI. Many teams run the one-click demo from the dashboard first, then explore the API.",
   },
 ];
