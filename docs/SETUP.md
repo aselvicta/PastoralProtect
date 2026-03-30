@@ -8,7 +8,7 @@ You can run the full stack **without** blockchain keys or Filecoin tokens.
 
 | Step | Action |
 |------|--------|
-| Backend env | Copy [`backend/.env.example`](../backend/.env.example) to `backend/.env`. Or run [`scripts/bootstrap-local.ps1`](../scripts/bootstrap-local.ps1) (Windows) / [`scripts/bootstrap-local.sh`](../scripts/bootstrap-local.sh) (macOS/Linux) once (creates env files if missing). Defaults work: SQLite `DATABASE_URL`, `JWT_SECRET` (change for anything beyond localhost), `ORACLE_SECRET`, `ADMIN_API_KEY`. |
+| Backend env | Copy [`backend/.env.example`](../backend/.env.example) to `backend/.env` and set **`SEED_JUDGE_DEMO_PASSWORD`** (and optional `SEED_*` for dev users). Or run [`scripts/bootstrap-local.ps1`](../scripts/bootstrap-local.ps1) / [`scripts/bootstrap-local.sh`](../scripts/bootstrap-local.sh) once (creates env files if missing). Also: SQLite `DATABASE_URL`, `JWT_SECRET`, `ORACLE_SECRET`, `ADMIN_API_KEY`. |
 | Frontend env | Copy [`frontend/.env.example`](../frontend/.env.example) to `frontend/.env.local` and adjust `NEXT_PUBLIC_API_BASE_URL` if the API is not on `http://127.0.0.1:8000`. The bootstrap scripts also create this file when missing. |
 | Python | From `backend/`: `python -m pip install -r requirements.txt` |
 | Node | From `frontend/`, `contracts/`, and (optional) [`storacha-uploader/`](../storacha-uploader/): `npm install` as needed |
@@ -17,7 +17,7 @@ You can run the full stack **without** blockchain keys or Filecoin tokens.
 
 **No secrets required** for: Storacha bridge (leave `STORACHA_UPLOADER_*` empty), legacy IPFS token (leave `WEB3_STORAGE_TOKEN` empty), chain (leave `BASE_RPC_URL`, `PRIVATE_KEY`, `CONTRACT_ADDRESS` empty), real M-Pesa.
 
-**Seeded web logins** (see README): `admin` / `Admin123!`, `oracle` / `Oracle123!`, `farmer` / `User123!` — upserted on backend startup; **not production-safe**.
+**Demo logins** are created only from **`SEED_*_PASSWORD`** in `backend/.env` (see [`backend/.env.example`](../backend/.env.example)). Set at least **`SEED_JUDGE_DEMO_PASSWORD`** for the judge sandbox; leave others empty to skip. **Not production-safe** — rotate for real deployments.
 
 ---
 

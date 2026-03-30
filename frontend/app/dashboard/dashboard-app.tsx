@@ -4,6 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import { PoolChart } from "@/components/pool-chart";
 import { apiGet, apiPost, API_BASE, getStoredToken, parseApiErrorBody, setStoredToken } from "@/lib/api";
 
+/** Defaults when env overrides unset — must match backend SEED_JUDGE_DEMO_PASSWORD. */
+const DEFAULT_DEMO_QUICK_USER = "judge_demo";
+const DEFAULT_DEMO_QUICK_PASS = "Demo123!";
+
+/**
+ * Demo quick sign-in credentials: env overrides if both set, else seeded defaults.
+ * NEXT_PUBLIC_* is bundled — optional production override only.
+ */
+function getDemoQuickLoginCredentials(): { username: string; password: string } {
+  const u = (process.env.NEXT_PUBLIC_DEMO_QUICK_LOGIN_USERNAME || "").trim();
+  const p = (process.env.NEXT_PUBLIC_DEMO_QUICK_LOGIN_PASSWORD || "").trim();
+  if (u && p) return { username: u, password: p };
+  return { username: DEFAULT_DEMO_QUICK_USER, password: DEFAULT_DEMO_QUICK_PASS };
+}
+
 type Pool = {
   total_policies: number;
   active_policies: number;
@@ -34,7 +49,7 @@ type Impact = {
 };
 
 export function DashboardApp() {
-  const [user, setUser] = useState("admin");
+  const [user, setUser] = useState("judge_demo");
   const [pass, setPass] = useState("");
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [data, setData] = useState<{
@@ -118,15 +133,14 @@ export function DashboardApp() {
     setPass("");
   };
 
-  const login = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const loginWithCredentials = async (username: string, password: string) => {
     setBusy(true);
     setLoadErr(null);
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.trim(), password: pass }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
       if (!res.ok) throw new Error(parseApiErrorBody(await res.text()));
       const body = (await res.json()) as { access_token: string };
@@ -137,6 +151,18 @@ export function DashboardApp() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await loginWithCredentials(user, pass);
+  };
+
+  const quickSignInAsDemo = () => {
+    const c = getDemoQuickLoginCredentials();
+    setUser(c.username);
+    setPass(c.password);
+    void loginWithCredentials(c.username, c.password);
   };
 
   const runDemo = async () => {
@@ -207,9 +233,17 @@ export function DashboardApp() {
               >
                 {busy ? "Signing in…" : "Sign in"}
               </button>
-              <p className="text-center text-xs text-savanna-500">
-                Demo credentials are in the project README.
+              <p className="text-center text-xs leading-relaxed text-savanna-600">
+                For judges: use Demo quick sign-in to enter a safe sandbox account.
               </p>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={quickSignInAsDemo}
+                className="w-full rounded-lg border border-skyj/40 bg-savanna-50/80 py-2.5 text-sm font-medium text-skyj hover:bg-sky-50 disabled:opacity-60"
+              >
+                Demo quick sign-in
+              </button>
             </form>
             {loadErr ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-900">
@@ -327,16 +361,18 @@ export function DashboardApp() {
             </summary>
             <div className="border-t border-savanna-100 px-5 py-4 space-y-6">
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs uppercase text-savanna-500">Contract</dt>
-                  <dd className="break-all font-mono text-xs text-savanna-800">
-                    {data.pool.contract_address || "Not configured"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase text-savanna-500">Latest tx</dt>
-                  <dd className="break-all font-mono text-xs text-savanna-800">{data.pool.latest_tx_hash || "—"}</dd>
-                </div>
+                {data.pool.contract_address ? (
+                  <div>
+                    <dt className="text-xs uppercase text-savanna-500">Contract</dt>
+                    <dd className="break-all font-mono text-xs text-savanna-800">{data.pool.contract_address}</dd>
+                  </div>
+                ) : null}
+                {data.pool.latest_tx_hash ? (
+                  <div>
+                    <dt className="text-xs uppercase text-savanna-500">Latest tx</dt>
+                    <dd className="break-all font-mono text-xs text-savanna-800">{data.pool.latest_tx_hash}</dd>
+                  </div>
+                ) : null}
                 <div className="sm:col-span-2">
                   <dt className="text-xs uppercase text-savanna-500">Latest storage CID</dt>
                   <dd className="break-all font-mono text-xs text-savanna-800">

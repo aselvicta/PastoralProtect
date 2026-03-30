@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # Comma-separated browser origins for CORS; empty uses localhost/127.0.0.1 :3000–3001
     cors_allowed_origins: str = ""
 
+    # Seed users at startup (empty = skip that user). Set in .env / Render — never commit real values.
+    seed_judge_demo_password: str = ""
+    seed_admin_password: str = ""
+    seed_oracle_password: str = ""
+    seed_farmer_password: str = ""
+
     # Allow POST /api/demo/run without JWT (hackathon kiosk); prefer False in production
     demo_public_access: bool = True
 

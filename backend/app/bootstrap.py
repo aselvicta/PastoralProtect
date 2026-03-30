@@ -1,9 +1,14 @@
+import logging
+
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app.models import db_models  # noqa: F401  — register tables
 from app.core.security import hash_password
 from app.models.db_models import User, Zone
+
+logger = logging.getLogger(__name__)
 
 
 def run_migrations() -> None:
@@ -49,22 +54,37 @@ def seed_demo_zones() -> None:
 
 
 def seed_demo_users() -> None:
-    """Ensure demo accounts exist with known passwords (upsert). Fixes stale DBs / hash scheme changes."""
+    """Upsert users whose SEED_*_PASSWORD is set in the environment (see backend/.env.example)."""
+    specs: list[tuple[str, str, str]] = [
+        ("judge_demo", settings.seed_judge_demo_password, "ADMIN"),
+        ("admin", settings.seed_admin_password, "ADMIN"),
+        ("oracle", settings.seed_oracle_password, "ORACLE"),
+        ("farmer", settings.seed_farmer_password, "USER"),
+    ]
     db = SessionLocal()
     try:
-        demo_rows = [
-            ("admin", "Admin123!", "ADMIN"),
-            ("oracle", "Oracle123!", "ORACLE"),
-            ("farmer", "User123!", "USER"),
-        ]
-        for username, plain, role in demo_rows:
+        seeded: list[str] = []
+        for username, plain, role in specs:
+            if not (plain or "").strip():
+                continue
             u = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
-            h = hash_password(plain)
+            h = hash_password(plain.strip())
             if u is None:
                 db.add(User(username=username, password_hash=h, role=role))
             else:
                 u.password_hash = h
                 u.role = role
+            seeded.append(username)
         db.commit()
+        if not seeded:
+            logger.warning(
+                "No demo users seeded: all SEED_*_PASSWORD values are empty. "
+                "Set at least SEED_JUDGE_DEMO_PASSWORD in backend/.env (see .env.example)."
+            )
+        elif "judge_demo" not in seeded:
+            logger.warning(
+                "judge_demo not seeded: SEED_JUDGE_DEMO_PASSWORD is empty. "
+                "Dashboard demo quick sign-in will fail until it is set."
+            )
     finally:
         db.close()

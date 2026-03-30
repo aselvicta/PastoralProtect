@@ -56,7 +56,7 @@ We have developed a rules-first pipeline that follows these steps:
 ```
 
 HOW TO FOLLOW PIPELINE IN UI:
-- Sign in as `admin` on the Dashboard and monitor the README pipeline card.
+- Sign in on the Dashboard (**Demo quick sign-in**) and monitor the README pipeline card.
 - `GET /api/cycle/status` (must be admin JWT) mirrors this pipeline.
 - With default mock stack, Run full demo turns all phases green. Solidity is *skipped* unless configured.
 
@@ -109,10 +109,10 @@ UI: Next.js 14, Tailwind, Recharts
 6. Retrieval API
    - `GET /api/storage/{cid}` available for external review/testing.
 
-SEEDED LOGINS:  
-- `admin` / `Admin123!`  
-- `oracle` / `Oracle123!`  
-- `farmer` / `User123!`  
+**Public demo (judges / reviewers):**  
+- User `judge_demo` is seeded when **`SEED_JUDGE_DEMO_PASSWORD`** is set in **`backend/.env`** (never commit `.env`). Use **Demo quick sign-in** on `/dashboard`; the password must match that env value (defaults in the frontend expect the same string you set server-side).
+
+Optional dev seeds: **`SEED_ADMIN_PASSWORD`**, **`SEED_ORACLE_PASSWORD`**, **`SEED_FARMER_PASSWORD`** — same file; empty means skip that user. See [`backend/.env.example`](backend/.env.example).
 
 ---
 
@@ -138,6 +138,7 @@ For detailed setup, refer to [docs/SETUP.md](docs/SETUP.md).
 cd backend
 python -m pip install -r requirements.txt
 cp .env.example .env
+# Edit .env: set at least SEED_JUDGE_DEMO_PASSWORD (must match frontend demo quick sign-in, e.g. Demo123!)
 # If using old SQLite w/o new columns, delete pastoral_protect.db
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -153,7 +154,7 @@ cp .env.example .env.local
 # Or: echo NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 > .env.local
 npm run dev
 ```
-- Visit `/dashboard` and login as `admin`.
+- Visit `/dashboard` and use **Demo quick sign-in**.
 - Click Run full demo or manually `/enroll` → `/simulate` (browser session must store JWT).
 - Check GET /api/storage/{cid} response for demo CIDs.
 

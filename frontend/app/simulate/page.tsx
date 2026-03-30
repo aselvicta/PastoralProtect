@@ -136,7 +136,7 @@ export default function SimulatePage() {
     e.preventDefault();
     if (!getStoredToken()) {
       setNeedsLogin(true);
-      setErr("Sign in on the dashboard first (admin or oracle).");
+      setErr("Sign in on the dashboard first (use Demo quick sign-in).");
       return;
     }
     setBusy(true);
@@ -174,7 +174,7 @@ export default function SimulatePage() {
               <Link href="/dashboard" className="font-semibold underline">
                 Dashboard
               </Link>{" "}
-              and sign in as <strong>admin</strong> or <strong>oracle</strong>, then come back here.
+              and use <strong>Demo quick sign-in</strong> (or any session with oracle access), then come back here.
             </p>
           )}
         </div>
