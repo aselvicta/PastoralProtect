@@ -17,7 +17,7 @@ from app.models.db_models import (
     Zone,
 )
 from app.services.contract_service import contract_service
-from app.services.filecoin_storage_service import filecoin_storage_service
+from app.services.filecoin_storage_service import StorageUploadResult, filecoin_storage_service
 from app.services.payment_service import payment_service
 
 
@@ -70,18 +70,20 @@ class OracleService:
             "breached": bool(breached),
         }
 
-        cid: str
-        digest: str
+        bundle_up: StorageUploadResult
         try:
-            cid, digest = await filecoin_storage_service.upload_json(f"oracle-{zone_slug}-w{week}", bundle)
+            bundle_up = await filecoin_storage_service.upload_json(f"oracle-{zone_slug}-w{week}", bundle)
             self._log_storage(
                 db,
                 kind="oracle_bundle",
                 entity_id=None,
-                cid=cid,
-                sha=digest,
+                cid=bundle_up.cid,
+                sha=bundle_up.content_sha256,
                 success=True,
-                detail="Filecoin/IPFS upload",
+                detail=(
+                    f"storage_mode={bundle_up.storage_mode}"
+                    + (f"; {bundle_up.warning}" if bundle_up.warning else "")
+                ),
             )
         except Exception as e:  # noqa: BLE001
             self._log_storage(
@@ -94,6 +96,9 @@ class OracleService:
                 detail=str(e),
             )
             raise ValueError(f"Decentralized storage upload failed: {e!s}") from e
+
+        cid = bundle_up.cid
+        digest = bundle_up.content_sha256
 
         reading = NdviReading(
             zone_db_id=zone.id,
@@ -159,6 +164,9 @@ class OracleService:
                 "message": "NDVI at or above threshold; no trigger.",
                 "content_sha256": digest,
                 "storage_cid": cid,
+                "storage_mode": bundle_up.storage_mode,
+                "storage_gateway_url": bundle_up.gateway_url,
+                "storage_warning": bundle_up.warning,
                 "verification_passed": verification_passed,
                 "verification_detail": verification_detail,
             }
@@ -192,6 +200,9 @@ class OracleService:
                 "message": "Trigger rejected: verifiable data mismatch (possible tampering).",
                 "content_sha256": digest,
                 "storage_cid": cid,
+                "storage_mode": bundle_up.storage_mode,
+                "storage_gateway_url": bundle_up.gateway_url,
+                "storage_warning": bundle_up.warning,
                 "verification_passed": False,
                 "verification_detail": verification_detail,
             }
@@ -240,6 +251,9 @@ class OracleService:
                 "message": "Threshold breached; no active policies to pay.",
                 "content_sha256": digest,
                 "storage_cid": cid,
+                "storage_mode": bundle_up.storage_mode,
+                "storage_gateway_url": bundle_up.gateway_url,
+                "storage_warning": bundle_up.warning,
                 "verification_passed": True,
                 "verification_detail": verification_detail,
             }
@@ -295,17 +309,22 @@ class OracleService:
                 "amount": amt,
                 "mock_reference": ref,
             }
+            pur: StorageUploadResult | None = None
             try:
-                pcid, phash = await filecoin_storage_service.upload_json(f"payout-{payout.id}", pay_payload)
-                payout.storage_cid = pcid
-                payout.content_sha256 = phash
+                pur = await filecoin_storage_service.upload_json(f"payout-{payout.id}", pay_payload)
+                payout.storage_cid = pur.cid
+                payout.content_sha256 = pur.content_sha256
                 self._log_storage(
                     db,
                     kind="payout",
                     entity_id=payout.id,
-                    cid=pcid,
-                    sha=phash,
+                    cid=pur.cid,
+                    sha=pur.content_sha256,
                     success=True,
+                    detail=(
+                        f"storage_mode={pur.storage_mode}"
+                        + (f"; {pur.warning}" if pur.warning else "")
+                    ),
                 )
             except Exception as e:  # noqa: BLE001
                 self._log_storage(
@@ -325,6 +344,9 @@ class OracleService:
                     "amount": amt,
                     "mock_reference": ref,
                     "storage_cid": payout.storage_cid,
+                    "storage_mode": pur.storage_mode if pur else None,
+                    "storage_gateway_url": pur.gateway_url if pur else None,
+                    "storage_warning": pur.warning if pur else None,
                 }
             )
 
@@ -357,6 +379,9 @@ class OracleService:
             "message": msg,
             "content_sha256": digest,
             "storage_cid": cid,
+            "storage_mode": bundle_up.storage_mode,
+            "storage_gateway_url": bundle_up.gateway_url,
+            "storage_warning": bundle_up.warning,
             "verification_passed": True,
             "verification_detail": verification_detail,
         }

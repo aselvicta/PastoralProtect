@@ -2,9 +2,12 @@
 Decentralized storage via IPFS / Filecoin.
 
 Priority:
-1. STORACHA_UPLOADER_URL — local Node service using @storacha/client (Storacha; email auth, no legacy API keys)
+1. STORACHA_UPLOADER_URL — Node service using @storacha/client (Storacha; email auth, no legacy API keys)
 2. WEB3_STORAGE_TOKEN — legacy HTTP Bearer upload (deprecated by Storacha for many accounts)
 3. Mock in-memory CIDs for local demos
+
+When STORACHA_FALLBACK_MOCK_ON_ERROR is true, Storacha (or legacy HTTP) failures fall back to mock CIDs
+with storage_mode=mock and a warning string — except 401 from the uploader (secret mismatch), which always fails fast.
 """
 
 from __future__ import annotations
@@ -14,7 +17,8 @@ import hashlib
 import json
 import logging
 import secrets
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any, Literal, Optional
 
 import httpx
 
@@ -25,6 +29,19 @@ logger = logging.getLogger(__name__)
 _mock_blobs: dict[str, bytes] = {}
 
 
+class StorachaUploaderAuthError(ValueError):
+    """401 from uploader — wrong STORACHA_UPLOADER_SECRET; do not mask with mock CID."""
+
+
+@dataclass(frozen=True)
+class StorageUploadResult:
+    cid: str
+    content_sha256: str
+    storage_mode: Literal["live", "mock"]
+    gateway_url: Optional[str] = None
+    warning: Optional[str] = None
+
+
 def canonical_json_bytes(obj: Any) -> bytes:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
@@ -33,68 +50,67 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _mock_upload(raw: bytes, label: str, digest: str) -> tuple[str, str]:
+def _live_gateway_url(cid: str) -> str:
+    base = settings.ipfs_gateway_base.rstrip("/")
+    return f"{base}/{cid.strip()}"
+
+
+def _mock_upload_result(
+    raw: bytes,
+    label: str,
+    digest: str,
+    *,
+    warning: Optional[str] = None,
+    no_warning: bool = False,
+) -> StorageUploadResult:
     cid = f"bafyMOCK{secrets.token_hex(12)}"
     _mock_blobs[cid] = raw
-    logger.info("Storage MOCK upload label=%s cid=%s sha256=%s", label, cid, digest[:16])
-    return cid, digest
+    if no_warning:
+        w: Optional[str] = None
+    elif warning is not None:
+        w = warning
+    else:
+        w = "Storacha upload unavailable; using in-memory mock CID for demo continuity."
+    logger.info(
+        "Storage MOCK upload label=%s cid=%s sha256=%s storage_mode=mock",
+        label,
+        cid,
+        digest[:16],
+    )
+    return StorageUploadResult(
+        cid=cid,
+        content_sha256=digest,
+        storage_mode="mock",
+        gateway_url=None,
+        warning=w,
+    )
+
+
+def _extract_error_detail(r: httpx.Response) -> str:
+    try:
+        body = r.json()
+        if isinstance(body, dict):
+            return str(body.get("detail", body))
+    except Exception:
+        pass
+    return (r.text or "")[:500]
 
 
 class FilecoinStorageService:
-    """Async JSON uploads with CID; integrity verification against raw CAR/file bytes."""
+    """Async JSON uploads with CID; integrity verification against gateway or in-memory mock store."""
 
-    async def upload_json(self, label: str, payload: dict[str, Any]) -> tuple[str, str]:
+    async def upload_json(self, label: str, payload: dict[str, Any]) -> StorageUploadResult:
         raw = canonical_json_bytes(payload)
         digest = sha256_hex(raw)
 
         sidecar = (settings.storacha_uploader_url or "").strip().rstrip("/")
         sidecar_secret = (settings.storacha_uploader_secret or "").strip()
         if sidecar and sidecar_secret:
-            try:
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    r = await client.post(
-                        f"{sidecar}/upload",
-                        json={
-                            "label": label,
-                            "body_b64": base64.b64encode(raw).decode("ascii"),
-                        },
-                        headers={"Authorization": f"Bearer {sidecar_secret}"},
-                    )
-                    if r.status_code == 401:
-                        raise ValueError(
-                            "Storacha uploader returned 401 (secret mismatch). Set "
-                            "STORACHA_UPLOADER_SECRET in backend/.env to the exact same value "
-                            "as STORACHA_UPLOADER_SECRET when you run npm start in storacha-uploader."
-                        )
-                    if r.status_code == 503:
-                        detail = ""
-                        try:
-                            detail = (r.json() or {}).get("detail", "")
-                        except Exception:
-                            detail = r.text[:500]
-                        if settings.storacha_fallback_mock_on_error:
-                            logger.warning(
-                                "Storacha uploader 503; using mock CID (STORACHA_FALLBACK_MOCK_ON_ERROR=true). %s",
-                                detail.strip() or "bridge not ready",
-                            )
-                            return _mock_upload(raw, label, digest)
-                        raise ValueError(
-                            f"Storacha uploader not ready (503). {detail}".strip()
-                        )
-                    r.raise_for_status()
-                    body = r.json()
-                    cid = body.get("cid")
-                    if not cid:
-                        raise ValueError(f"Storacha uploader response missing cid: {body!r}")
-                logger.info("Storage Storacha (sidecar) label=%s cid=%s sha256=%s", label, cid, digest[:16])
-                return str(cid), digest
-            except Exception:
-                logger.exception("Storacha sidecar upload failed label=%s", label)
-                raise
+            return await self._upload_via_storacha_sidecar(label, raw, digest)
 
         token = (settings.web3_storage_token or "").strip()
         if not token:
-            return _mock_upload(raw, label, digest)
+            return _mock_upload_result(raw, label, digest, no_warning=True)
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -106,10 +122,95 @@ class FilecoinStorageService:
                 cid = body.get("cid") or body.get("Cid")
                 if not cid:
                     raise ValueError(f"Upload response missing cid: {body!r}")
-            logger.info("Storage legacy HTTP upload label=%s cid=%s sha256=%s", label, cid, digest[:16])
-            return str(cid), digest
-        except Exception:
-            logger.exception("Storage upload failed label=%s", label)
+            cid_s = str(cid)
+            logger.info("Storage legacy HTTP upload label=%s cid=%s sha256=%s", label, cid_s, digest[:16])
+            return StorageUploadResult(
+                cid=cid_s,
+                content_sha256=digest,
+                storage_mode="live",
+                gateway_url=_live_gateway_url(cid_s),
+                warning=None,
+            )
+        except Exception as e:
+            logger.exception("Storage legacy HTTP upload failed label=%s", label)
+            if settings.storacha_fallback_mock_on_error:
+                return _mock_upload_result(
+                    raw,
+                    label,
+                    digest,
+                    warning=f"Legacy web3.storage upload failed: {e!s}",
+                )
+            raise
+
+    async def _upload_via_storacha_sidecar(self, label: str, raw: bytes, digest: str) -> StorageUploadResult:
+        sidecar = (settings.storacha_uploader_url or "").strip().rstrip("/")
+        sidecar_secret = (settings.storacha_uploader_secret or "").strip()
+
+        def success_result(cid_str: str) -> StorageUploadResult:
+            logger.info(
+                "Storage Storacha (sidecar) label=%s cid=%s sha256=%s storage_mode=live",
+                label,
+                cid_str,
+                digest[:16],
+            )
+            return StorageUploadResult(
+                cid=cid_str,
+                content_sha256=digest,
+                storage_mode="live",
+                gateway_url=_live_gateway_url(cid_str),
+                warning=None,
+            )
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                r = await client.post(
+                    f"{sidecar}/upload",
+                    json={
+                        "label": label,
+                        "body_b64": base64.b64encode(raw).decode("ascii"),
+                    },
+                    headers={"Authorization": f"Bearer {sidecar_secret}"},
+                )
+                if r.status_code == 401:
+                    raise StorachaUploaderAuthError(
+                        "Storacha uploader returned 401 (secret mismatch). Set "
+                        "STORACHA_UPLOADER_SECRET in backend/.env to the exact same value "
+                        "as STORACHA_UPLOADER_SECRET when you run npm start in storacha-uploader."
+                    )
+                if r.is_success:
+                    body = r.json()
+                    cid = body.get("cid")
+                    if not cid:
+                        raise ValueError(f"Storacha uploader response missing cid: {body!r}")
+                    return success_result(str(cid))
+
+                detail = _extract_error_detail(r).strip() or "bridge error"
+                err_msg = f"Storacha uploader HTTP {r.status_code}: {detail}"
+                if settings.storacha_fallback_mock_on_error:
+                    logger.warning(
+                        "Storacha sidecar non-success; mock fallback (STORACHA_FALLBACK_MOCK_ON_ERROR=true). %s",
+                        err_msg,
+                    )
+                    return _mock_upload_result(raw, label, digest, warning=err_msg)
+                raise ValueError(err_msg)
+        except StorachaUploaderAuthError:
+            raise
+        except httpx.HTTPError as e:
+            err_msg = f"Storacha uploader unreachable: {e!s}"
+            if settings.storacha_fallback_mock_on_error:
+                logger.warning(
+                    "Storacha sidecar request failed; mock fallback (STORACHA_FALLBACK_MOCK_ON_ERROR=true). %s",
+                    err_msg,
+                )
+                return _mock_upload_result(raw, label, digest, warning=err_msg)
+            raise ValueError(err_msg) from e
+        except ValueError as e:
+            if settings.storacha_fallback_mock_on_error:
+                logger.warning(
+                    "Storacha sidecar failed; mock fallback (STORACHA_FALLBACK_MOCK_ON_ERROR=true). %s",
+                    e,
+                )
+                return _mock_upload_result(raw, label, digest, warning=str(e))
             raise
 
     async def fetch_raw(self, cid: str) -> bytes:

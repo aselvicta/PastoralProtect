@@ -118,7 +118,7 @@ SEEDED LOGINS:
 
 ## STEP-BY-STEP SETUP CHECKLIST
 
-For detailed setup, refer to [docs/SETUP.md](docs/SETUP.md).
+For detailed setup, refer to [docs/SETUP.md](docs/SETUP.md). For Vercel + Render + Postgres + live Storacha CIDs, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### 1. CREDENTIALS & OPTIONAL SERVICES
 

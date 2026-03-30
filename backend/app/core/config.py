@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Filecoin / IPFS — Storacha (recommended): local Node bridge using @storacha/client (email login, no API keys)
     storacha_uploader_url: str = ""
     storacha_uploader_secret: str = ""
-    # If true, 503 from the Storacha bridge (e.g. no space / login) uses in-memory mock CIDs instead of failing the oracle
+    # If true, Storacha uploader failures (HTTP errors, timeouts, missing cid, etc.) use mock CIDs except 401 (secret mismatch)
     storacha_fallback_mock_on_error: bool = True
 
     # Legacy: web3.storage-compatible HTTP upload (Bearer token) — deprecated by Storacha; prefer storacha_uploader_*
