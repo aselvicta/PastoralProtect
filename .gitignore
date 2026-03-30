@@ -57,6 +57,9 @@ id_rsa
 id_ed25519
 *.keystore
 
+# Local-only deployment notes (not tracked)
+docs/DEPLOYMENT.md
+
 # Storacha / w3 agent store if ever copied into the repo
 **/w3up-client.json
 **/w3access*.json
