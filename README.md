@@ -2,7 +2,7 @@
 
 Fresh Code for Hackathon Submission · Infrastructure & Digital Rights Track
 
-PastoralProtect is climate risk infrastructure specifically designed for pastoralists, not just another generic farmer app. It integrates verifiable NDVI-style triggers, Filecoin/IPFS-ready decentralized storage, optional Solidity pool validation, and mobile-money-style payout rails. This empowers insurers, cooperatives, NGOs, and governments to deliver automatic, transparent protection—eliminating manual claims and on-the-ground field inspections.
+PastoralProtect is climate risk infrastructure specifically designed for pastoralists, not just anotther app. It integrates verifiable NDVI-style triggers, Filecoin/IPFS-ready decentralized storage, optional Solidity pool validation, and mobile-money-style payout rails. This empowers insurers, cooperatives, NGOs, and governments to deliver automatic, transparent protection—eliminating manual claims and on-the-ground field inspections.
 
 ---
 
@@ -19,9 +19,9 @@ We have developed a rules-first pipeline that follows these steps:
 1. Enroll the user.
 2. Archive NDVI bundles to IPFS (Filecoin ecosystem) with SHA-256 integrity.
 3. Oracle verifies retrieval before any payouts execute.
-4. Optional on-chain validation: Uses `validateAndPayout` for full auditability.
+4. On-chain validation: Uses `validateAndPayout` for full auditability.
 5. Mock M-Pesa demo payouts: Ensures end-to-end demo flow.
-6. Role-based access: JWT roles (`ADMIN`, `ORACLE`, `USER`) control dashboards; architecture is cleanly split for future Lit Protocol integration.
+6. Role-based access: JWT roles (`ADMIN`, `ORACLE`, `USER`) control dashboards;
 
 ---
 
@@ -48,7 +48,7 @@ We have developed a rules-first pipeline that follows these steps:
  └──────────┬────────────┘
             │
  ┌──────────▼────────────┐          ┌──────────────────┐
- │ PASTORALPROTECTPOOL   │◄─────────│   web3.py txs    │   optional Base Sepolia
+ │ PASTORALPROTECTPOOL   │◄─────────│   web3.py txs    │   oBase Sepolia
  │    (SOLIDITY)         │          └──────────────────┘
  └──────────┬────────────┘
             ▼
@@ -69,16 +69,14 @@ HOW TO FOLLOW PIPELINE IN UI:
   2. Pinned using one of:
       - (a) [storacha-uploader](storacha-uploader/README.md) (+ `@storacha/client`)
       - (b) Legacy `WEB3_STORAGE_TOKEN` + `FILECOIN_UPLOAD_URL`
-      - (c) Mock CIDs for local/demo.
+      - (c) Content ID (CID) from storacha
   3. Fetch with `GET /api/storage/{cid}` for judges/reviewers.
-- DEFAULT: Leave Storacha/token unset to use in-process mock CIDs for full end-to-end local testing.
-
 ---
 
 ## TECHNOLOGY STACK
 
 API: FastAPI, Pydantic, Uvicorn
-DATA: SQLAlchemy + PostgreSQL or SQLite
+DATA: SQLAlchemy + PostgreSQL or SQLite(in development)
 STORAGE: IPFS/Filecoin (HTTP pinning + gateway fetch)
 AUTH: JWT roles (ADMIN, ORACLE, USER) — Lit-style ready
 CHAIN: Solidity (PastoralProtectPool) + Hardhat + web3.py
@@ -108,13 +106,6 @@ UI: Next.js 14, Tailwind, Recharts
    - Dashboard provides Run full demo button with JSON trace.
 6. Retrieval API
    - `GET /api/storage/{cid}` available for external review/testing.
-
-**Public demo (judges / reviewers):**  
-- User `judge_demo` is seeded when **`SEED_JUDGE_DEMO_PASSWORD`** is set in **`backend/.env`** (never commit `.env`). Use **Demo quick sign-in** on `/dashboard`; the password must match that env value (defaults in the frontend expect the same string you set server-side).
-
-Optional dev seeds: **`SEED_ADMIN_PASSWORD`**, **`SEED_ORACLE_PASSWORD`**, **`SEED_FARMER_PASSWORD`** — same file; empty means skip that user. See [`backend/.env.example`](backend/.env.example).
-
----
 
 ## STEP-BY-STEP SETUP CHECKLIST
 
@@ -158,7 +149,7 @@ npm run dev
 - Click Run full demo or manually `/enroll` → `/simulate` (browser session must store JWT).
 - Check GET /api/storage/{cid} response for demo CIDs.
 
-### STEP 3: CONTRACTS (OPTIONAL)
+### STEP 3: CONTRACTS
 
 ```bash
 cd contracts
