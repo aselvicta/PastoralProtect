@@ -234,7 +234,7 @@ export function DashboardApp() {
                 {busy ? "Signing in…" : "Sign in"}
               </button>
               <p className="text-center text-xs leading-relaxed text-savanna-600">
-                For judges: use Demo quick sign-in to enter a safe sandbox account.
+                Use demo quick sign-in for a safe sandbox account.
               </p>
               <button
                 type="button"
